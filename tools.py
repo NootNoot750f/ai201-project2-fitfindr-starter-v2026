@@ -103,8 +103,27 @@ def search_listings(
     Test it from a terminal before you move on:
         python -c "from tools import search_listings; print(search_listings('graphic tee', max_price=30))"
     """
-    # TODO: replace this with your implementation
-    return []
+    listings = load_listings()
+    candidates = []
+
+    query_keywords = _keywords(description)
+
+    for listing in listings:
+        if max_price is not None and listing["price"] > max_price:
+            continue
+        if size is not None and not _size_matches(size, listing["size"]):
+            continue
+
+        listing_keywords = _keywords(listing["title"] + " " + (listing["description"] or ""))
+        listing_tags = set(listing.get("style_tags", []))
+
+        score = len(query_keywords & (listing_keywords | listing_tags))
+
+        if score > 0:
+            candidates.append((score, listing))
+
+    candidates.sort(key=lambda x: x[0], reverse=True)
+    return [listing for score, listing in candidates[:config.SEARCH_RESULT_LIMIT]]
 
 
 # ── Tool 2: suggest_outfit ────────────────────────────────────────────────────
@@ -137,8 +156,27 @@ def suggest_outfit(new_item: dict, wardrobe: dict) -> str:
     Test it from a terminal before you move on:
         python -c "from tools import suggest_outfit; from utils.data_loader import get_example_wardrobe, load_listings; print(suggest_outfit(load_listings()[0], get_example_wardrobe()))"
     """
-    # TODO: replace this with your implementation
-    return ""
+    item_desc = f"{new_item['title']} ({new_item['category']}, {new_item['colors']})"
+
+    if not wardrobe.get("items"):
+        prompt = f"""Suggest 1-2 general styling ideas for this thrifted item: {item_desc}
+
+Be casual and creative. Name specific vibes or occasions it would work for."""
+    else:
+        wardrobe_list = "\n".join([
+            f"- {item['name']} ({item.get('category', 'other')})"
+            for item in wardrobe["items"]
+        ])
+        prompt = f"""Suggest 1-2 outfit combinations using this thrifted item and pieces from the user's wardrobe.
+
+New item: {item_desc}
+
+User's wardrobe:
+{wardrobe_list}
+
+Name specific pieces from the wardrobe that would work with the new item. Be creative with vibes and occasions."""
+
+    return generate(prompt)
 
 
 # ── Tool 3: create_fit_card ───────────────────────────────────────────────────
@@ -177,5 +215,18 @@ def create_fit_card(outfit: str, new_item: dict) -> str:
     Test it from a terminal before you move on:
         python -c "from tools import create_fit_card; from utils.data_loader import load_listings; print(create_fit_card('jeans and white sneakers', load_listings()[0]))"
     """
-    # TODO: replace this with your implementation
-    return ""
+    if not outfit or not outfit.strip():
+        return "Can't write a caption without outfit suggestions. Try running the search again."
+
+    prompt = f"""Write a 2-4 sentence social media caption for posting about a thrifted find.
+
+Item: {new_item['title']} ({new_item['category']})
+Price: ${new_item['price']}
+Platform: {new_item['platform']}
+Condition: {new_item['condition']}
+
+Outfit idea: {outfit}
+
+Write like you're actually posting it. Mention the item, price, and platform once each. Be specific about the vibe. Use emoji if it feels natural."""
+
+    return generate(prompt)
