@@ -99,33 +99,55 @@ A user tells FitFindr what they're looking for — a vintage graphic tee, size M
 
 ## Sample Run
 
-<!-- Two things go here.
-
-     1. One FULL query and its output, pasted as text.
-     2. Your three per-tool terminal tests — the command and what it printed. -->
-
 **One full query**
 
 ```
-$ python app.py ask '...'
+$ python agent.py
 
+=== A query the data can match ===
+  found:    Y2K Baby Tee — Butterfly Print — $18.0 on depop
+  outfit:   Here are two outfit combinations featuring the Y2K butterfly baby tee and pieces from your wardrobe, styled for different vibes and occasions:
+
+### Outfit 1: Off-Duty Model Streetwear (Casual Day Out / Coffee Run)
+* **Vibe:** Relaxed, effortless, and nostalgic 2000s energy.
+* **Top:** Y2K Butterfly Baby Tee (white/pink/purple)
+* **Bottoms:** Baggy straight-leg jeans (dark wash)
+* **Outerwear:** Black cropped zip hoodie (worn open or draped over the shoulders)
+* **Shoes:** Chunky white sneakers
+* **Accessories:** Black crossbody bag
+
+### Outfit 2: Edgy Retro-Chic (Dinner with Friends / Concert)
+* **Vibe:** Cool-girl contrast, mixing sweet 90s/Y2K elements with tough textures.
+* **Top:** Y2K Butterfly Baby Tee (white/pink/purple)
+* **Bottoms:** Wide-leg khaki trousers
+* **Outerwear:** Vintage black denim jacket
+* **Shoes:** Black combat boots
+* **Accessories:** Brown leather belt & Black crossbody bag
+
+  fit card: Channeling peak off-duty model energy with this 2000s butterfly baby tee 🦋✨ Style it with baggy denim for a casual coffee run or wide-leg trousers and combat boots for an edgy retro-chic night out. Grab this Y2K gem in excellent condition for just $18.0 on Depop before she's gone! 🛍️
+
+=== A query it can't ===
+  stopped: No items found matching 'designer ballgown $5'. Try different keywords, a larger size range, or increase your budget.
+  fit_card is None — it should still be None here
 ```
 
 **The three tools, tested one at a time**
 
 ```
-$ python -c "from tools import search_listings; print(search_listings('graphic tee', max_price=30))"
-
+$ python -c "from tools import search_listings; results = search_listings('graphic tee', max_price=30); print(f'Found {len(results)} results'); [print(f'{r[\"title\"]} - ${r[\"price\"]}') for r in results[:2]]"
+Found 6 results
+Y2K Baby Tee — Butterfly Print - $18.0
+Graphic Tee — 2003 Tour Bootleg Style - $24.0
 ```
 
 ```
-$ python -c "from tools import suggest_outfit; ..."
-
+$ python -c "from tools import suggest_outfit; from utils.data_loader import get_example_wardrobe, load_listings; print(suggest_outfit(load_listings()[0], get_example_wardrobe())[:100])"
+Here are two outfit combinations featuring the Vintage Levi's 501 Jeans and pieces from your...
 ```
 
 ```
-$ python -c "from tools import create_fit_card; ..."
-
+$ python -c "from tools import create_fit_card; from utils.data_loader import load_listings; print(create_fit_card('white sneakers and a grey sweatshirt', load_listings()[0])[:80])"
+Found the perfect pair of vintage Levi's 501s in a medium wash! The light fading...
 ```
 
 ---

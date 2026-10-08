@@ -13,6 +13,7 @@ Build and test your three tools in `tools.py` first. Then come here.
     python agent.py          runs both example paths below
 """
 
+import re
 import config
 import trace
 from tools import search_listings, suggest_outfit, create_fit_card
@@ -106,9 +107,51 @@ def run_agent(query: str, wardrobe: dict) -> dict:
         than a stack trace. The import is already at the top of this file.
     """
     session = new_session(query, wardrobe)
+    iteration = 0
 
-    # TODO: delete these two lines and build the loop.
-    session["error"] = "The planning loop isn't built yet — see the TODO in agent.py."
+    iteration += 1
+    trace.check_iterations(iteration)
+
+    description = query
+    size = None
+    max_price = None
+
+    size_match = re.search(r'size\s+([a-zA-Z0-9/\s]+?)(?:\s+under|\s*$)', query, re.IGNORECASE)
+    if size_match:
+        size = size_match.group(1).strip()
+
+    price_match = re.search(r'under\s+\$?(\d+(?:\.\d{2})?)', query, re.IGNORECASE)
+    if price_match:
+        max_price = float(price_match.group(1))
+
+    description = re.sub(r'size\s+[a-zA-Z0-9/\s]+', '', query, flags=re.IGNORECASE)
+    description = re.sub(r'under\s+\$?[\d.]+', '', description, flags=re.IGNORECASE)
+    description = description.strip()
+
+    session["parsed"] = {
+        "description": description,
+        "size": size,
+        "max_price": max_price,
+    }
+
+    results = search_listings(description, size, max_price)
+    session["search_results"] = results
+
+    if not results:
+        session["error"] = (
+            f"No items found matching '{description}'. "
+            f"Try different keywords, a larger size range, or increase your budget."
+        )
+        return session
+
+    session["selected_item"] = results[0]
+
+    outfit = suggest_outfit(session["selected_item"], wardrobe)
+    session["outfit_suggestion"] = outfit
+
+    fit_card = create_fit_card(outfit, session["selected_item"])
+    session["fit_card"] = fit_card
+
     return session
 
 
