@@ -20,12 +20,37 @@ That last line is what your loop branches on. "Returns a list" earns nothing —
 the description has to say what is *in* the list.
 """
 
+import re
+
 import config  # noqa: F401 — you'll use this in search_listings
 from generate import generate
 from utils.data_loader import load_listings
 
 
 # ── Tool 1: search_listings ───────────────────────────────────────────────────
+
+STOPWORDS = {
+    "a", "an", "and", "the", "for", "with", "under", "over", "in", "of"
+}
+
+def _keywords(text: str) -> set[str]:
+    """Lowercase words worth matching on, stopwords removed"""
+    words = re.findall(r"[a-z0-9]+", (text or "").lower())
+    return {w for w in words if w not in STOPWORDS and len(w) > 1}
+
+def _size_tokens(size: str) -> set[str]:
+    """Extract size tokens from a size string, removing parentheticals."""
+    cleaned = re.sub(r"\([^)]*\)", "", size or "")
+    parts = [p.strip().upper() for p in cleaned.split("/")]
+    return {p for p in parts if p}
+
+def _size_matches(wanted: str, listing_size: str) -> bool:
+    """Check if a wanted size matches a listing's size."""
+    wanted_tokens = _size_tokens(wanted)
+    listing_tokens = _size_tokens(listing_size)
+    if not wanted_tokens or not listing_tokens:
+        return False
+    return bool(wanted_tokens & listing_tokens)
 
 def search_listings(
     description: str,
