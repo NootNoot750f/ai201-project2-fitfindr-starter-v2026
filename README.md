@@ -154,24 +154,17 @@ Found the perfect pair of vintage Levi's 501s in a medium wash! The light fading
 
 ## How I Used AI
 
-<!-- Two specific moments. What you asked, what came back, what you changed.
+**Moment 1 — Defining the tool specs**
 
-     "I used Claude to help me code" is not enough.
+- *What I asked for:* Help me understand what each tool should return, with specific types and what happens when there's no data. I wasn't sure if search_listings should return None or an empty list when nothing matches.
+- *What came back:* Claude suggested that search_listings should return an empty list (not None), and that suggest_outfit should return general styling advice when the wardrobe is empty. Claude also clarified that create_fit_card should describe what "different every time" means for the model output.
+- *What I changed:* I updated the Tool Inventory section in the README with specific return types (e.g., "a list of listing dicts, each with id, title, description...") and made sure my implementation matched those specs exactly. This prevented a lot of debugging later.
 
-     "I gave Claude my search_listings spec. It returned None on no match
-     instead of an empty list, so I changed it" is the level we want. -->
+**Moment 2 — Building the planning loop**
 
-**Moment 1**
-
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
-
-**Moment 2**
-
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- *What I asked for:* How should I parse the query to extract size and price? Should I use regex, string splitting, or ask the model?
+- *What came back:* Claude suggested regex as the clearest approach and provided example patterns for extracting "size M" and "under $30" from the query string.
+- *What I changed:* I used regex to extract both fields, then removed those parts from the description. This let me pass clean data to search_listings instead of having it search for "size M" as keywords.
 
 <!-- ═══════════════════════ UNIT 4 — THE TEST ═══════════════════════
 
