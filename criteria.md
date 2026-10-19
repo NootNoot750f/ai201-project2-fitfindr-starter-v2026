@@ -55,6 +55,10 @@ For five different items, all five fit cards should mention the price and platfo
 **Why this target:**
 The model varies its wording, which is fine, but every caption needs price and platform to be useful on social media. Long captions don't work. Different items should produce different openings, or the tool isn't actually paying attention to what it's describing.
 
+> **Revised in unit 4:** Each fit card, from a single query, mentions the item's price and platform and is 2 to 4 sentences long, in 5 of 5 tries.
+>
+> **Why revised:** "Different every time" and "no two openings identical" can't be checked from one scenario run five times. Price, platform, and length can be checked on each card.
+
 ---
 
 ## 5. Price ceiling is enforced

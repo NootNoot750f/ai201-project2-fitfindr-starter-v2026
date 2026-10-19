@@ -35,7 +35,28 @@ SCENARIOS = [
         "wardrobe": "empty",
         "criterion": None,
     },
-    # TODO: add what your criteria 3, 4 and 5 need.
+    {
+        # Criterion 3: the item in the session is the first search result.
+        "name": "selected item matches first result",
+        "query": "band tee under $25",
+        "wardrobe": "example",
+        "criterion": 3,
+    },
+    {
+        # Criterion 4 (revised): fit card price, platform, and length.
+        "name": "fit card has price, platform, length",
+        "query": "vintage graphic tee under $30",
+        "wardrobe": "example",
+        "criterion": 4,
+    },
+    {
+        # Criterion 5: no result over the budget.
+        "name": "over-budget query stays under budget",
+        "query": "graphic tee under $20",
+        "wardrobe": "example",
+        "criterion": 5,
+    },
+    # TODO: add anything else your criteria need.
     #
     # Set "criterion" to the number in criteria.md that the scenario tests.
     # "criterion": None means a diagnostic run — useful to have, but it isn't
