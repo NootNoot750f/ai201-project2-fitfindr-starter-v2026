@@ -85,7 +85,7 @@ A user tells FitFindr what they're looking for — a vintage graphic tee, size M
 
 **Where it lives:** `agent.py::run_agent`
 
-**How the query is parsed:** Regex. Extract `size` using pattern `r'size\s+([a-zA-Z0-9/\s]+)'` and `max_price` using pattern `r'under\s+\$?(\d+(?:\.\d{2})?)'`. Everything else becomes the description.
+**How the query is parsed:** Regex, in `agent.py::run_agent`. Size comes from `r'size\s+([a-zA-Z0-9/\s]+?)(?:\s+under|\s*$)'` and max_price from `r'under\s+\$?(\d+(?:\.\d{2})?)'`, both case-insensitive. The matched size and price text is then removed from the query with `re.sub`, and what's left (stripped) is the description.
 
 **What moves through the session:** 
 - `query` → `parsed` (extracted description, size, max_price)
@@ -134,37 +134,46 @@ $ python agent.py
 **The three tools, tested one at a time**
 
 ```
-$ python -c "from tools import search_listings; results = search_listings('graphic tee', max_price=30); print(f'Found {len(results)} results'); [print(f'{r[\"title\"]} - ${r[\"price\"]}') for r in results[:2]]"
-Found 6 results
-Y2K Baby Tee — Butterfly Print - $18.0
-Graphic Tee — 2003 Tour Bootleg Style - $24.0
+$ python -c "from tools import search_listings; r = search_listings('graphic tee', max_price=30); print(len(r), 'results'); print([(x['title'], x['price']) for x in r[:2]])"
+6 results
+[('Y2K Baby Tee — Butterfly Print', 18.0), ('Graphic Tee — 2003 Tour Bootleg Style', 24.0)]
 ```
 
 ```
-$ python -c "from tools import suggest_outfit; from utils.data_loader import get_example_wardrobe, load_listings; print(suggest_outfit(load_listings()[0], get_example_wardrobe())[:100])"
-Here are two outfit combinations featuring the Vintage Levi's 501 Jeans and pieces from your...
+$ python -c "from tools import suggest_outfit; from utils.data_loader import get_example_wardrobe, load_listings; print(suggest_outfit(load_listings()[0], get_example_wardrobe()))"
+Here are two outfit combinations featuring your new Vintage Levi's 501 jeans and pieces from your wardrobe, styled for different vibes and occasions:
+
+### Outfit 1: Casual Coffee Run (Off-Duty Cool Vibe)
+* **New Item:** Vintage Levi's 501 Jeans (Medium Wash)
+* **Top:** White ribbed tank top
+* **Outerwear:** Vintage black denim jacket
+* **Shoes:** Chunky white sneakers
+* **Accessories:** Black crossbody bag, Brown leather belt
+...
 ```
 
+(Output abridged after the first outfit. The full response is two outfits.)
+
 ```
-$ python -c "from tools import create_fit_card; from utils.data_loader import load_listings; print(create_fit_card('white sneakers and a grey sweatshirt', load_listings()[0])[:80])"
-Found the perfect pair of vintage Levi's 501s in a medium wash! The light fading...
+$ python -c "from tools import create_fit_card; from utils.data_loader import load_listings; print(create_fit_card('white sneakers and a grey sweatshirt', load_listings()[0]))"
+Nothing beats the effortless, off-duty vibe of a true vintage classic. 👖✨ These perfectly faded medium wash Levi's 501s give off the ultimate effortless 90s aesthetic—just pair them with a cozy grey sweatshirt and fresh white sneakers for that ultimate cool-girl look. Grab them in good condition for just $38.0 over on my depop shop before they're gone!
 ```
 
 ---
 
 ## How I Used AI
 
-**Moment 1 — Defining the tool specs**
+**Moment 1 — Drafting the Tool Inventory**
 
-- *What I asked for:* Help me understand what each tool should return, with specific types and what happens when there's no data. I wasn't sure if search_listings should return None or an empty list when nothing matches.
-- *What came back:* Claude suggested that search_listings should return an empty list (not None), and that suggest_outfit should return general styling advice when the wardrobe is empty. Claude also clarified that create_fit_card should describe what "different every time" means for the model output.
-- *What I changed:* I updated the Tool Inventory section in the README with specific return types (e.g., "a list of listing dicts, each with id, title, description...") and made sure my implementation matched those specs exactly. This prevented a lot of debugging later.
+- *What I asked for:* I asked Claude to help me spec the three tools: what each takes, what it returns, and what it returns when there's nothing. I asked it to base this on the listing and wardrobe fields in the data.
+- *What came back:* Claude drafted the four lines per tool, including `search_listings` returning a list of listing dicts and an empty list when nothing matches, and `suggest_outfit` falling back to general styling advice when the wardrobe is empty.
+- *What I changed:* [YOU FILL IN: what you checked or changed in that draft, in your own words.]
 
-**Moment 2 — Building the planning loop**
+**Moment 2 — Choosing how to parse the query**
 
-- *What I asked for:* How should I parse the query to extract size and price? Should I use regex, string splitting, or ask the model?
-- *What came back:* Claude suggested regex as the clearest approach and provided example patterns for extracting "size M" and "under $30" from the query string.
-- *What I changed:* I used regex to extract both fields, then removed those parts from the description. This let me pass clean data to search_listings instead of having it search for "size M" as keywords.
+- *What I asked for:* How should the agent pull size and max price out of a query like "vintage graphic tee under $30, size M"? Regex, string splitting, or asking the model?
+- *What came back:* Claude recommended regex for these consistent formats and wrote the patterns into `run_agent`.
+- *What I changed:* I chose regex. When I ran the "designer ballgown size XXS under $5" query, the leftover text became `designer ballgown $5`, so the price stayed in the search keywords. [YOU FILL IN: what you did about it, or leave it as a known issue for Unit 4.]
 
 <!-- ═══════════════════════ UNIT 4 — THE TEST ═══════════════════════
 
