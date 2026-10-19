@@ -297,6 +297,48 @@ The empty trace is shorter because the loop stops before `suggest_outfit`. Befor
 
 ---
 
+## Failure Modes
+
+Each failure triggered on purpose. Output is pasted as it printed.
+
+**1. Empty search.** `python app.py ask 'designer ballgown size XXS under $5'` (after the fix)
+
+```
+  No items found matching 'designer ballgown'. Try different keywords, a larger size range, or increase your budget.
+```
+
+The branch in `agent.py::run_agent` stops here, so `suggest_outfit` is never called.
+
+**2. Empty wardrobe.** `python app.py ask 'denim jacket under $50' --empty-wardrobe` (abridged)
+
+```
+(running with an empty wardrobe)
+
+  Found:    Denim Jacket — Light Wash, Cropped — $42.0 on poshmark
+
+  Outfit:   Here are two fun, distinct ways to style your cropped light-wash denim jacket:
+...
+```
+
+`tools.py::suggest_outfit` returns styling advice when the wardrobe is empty, so the user gets advice rather than a crash.
+
+**3. Model unavailable.** I changed one character of the key and ran a new query. Before the handler was added, the error came from the catch-all in `app.py`:
+
+```
+ModelUnavailable: The model rejected your API key. Check GEMINI_API_KEY in your .env file, or create a fresh key at aistudio.google.com.
+```
+
+After adding the handler in `agent.py::run_agent`, I forced the same error with a mock, because the real key is restored:
+
+```
+error: Couldn't reach the model. The model rejected your API key. Check GEMINI_API_KEY in your .env file.
+fit_card: None
+```
+
+I haven't re-run this with a broken key since adding the handler.
+
+---
+
 ## The Improvement
 
 <!-- What you changed, why your diagnosis pointed at it, and the after-run in
