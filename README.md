@@ -167,13 +167,14 @@ Nothing beats the effortless, off-duty vibe of a true vintage classic. 👖✨ T
 
 - *What I asked for:* I asked Claude to help me spec the three tools: what each takes, what it returns, and what it returns when there's nothing. I asked it to base this on the listing and wardrobe fields in the data.
 - *What came back:* Claude drafted the four lines per tool, including `search_listings` returning a list of listing dicts and an empty list when nothing matches, and `suggest_outfit` falling back to general styling advice when the wardrobe is empty.
-- *What I changed:* [YOU FILL IN: what you checked or changed in that draft, in your own words.]
+- *What I changed:* I asked Claude to draft the Tool Inventory from the listing and wardrobe fields. I checked it against the data and kept it as written.
 
 **Moment 2 — Choosing how to parse the query**
 
 - *What I asked for:* How should the agent pull size and max price out of a query like "vintage graphic tee under $30, size M"? Regex, string splitting, or asking the model?
 - *What came back:* Claude recommended regex for these consistent formats and wrote the patterns into `run_agent`.
-- *What I changed:* I chose regex. When I ran the "designer ballgown size XXS under $5" query, the leftover text became `designer ballgown $5`, so the price stayed in the search keywords. [YOU FILL IN: what you did about it, or leave it as a known issue for Unit 4.]
+- *What I changed:* I chose regex. When I ran the "designer ballgown size XXS under $5" query, the leftover text became `designer ballgown $5`, so the price stayed in the search keywords.
+  I left the size bug as a known issue in Unit 3. I found its cause in the Unit 4 trace and fixed it there.
 
 <!-- ═══════════════════════ UNIT 4 — THE TEST ═══════════════════════
 
@@ -195,17 +196,20 @@ Nothing beats the effortless, off-duty vibe of a true vintage classic. 👖✨ T
 
 | Criterion | Target | Try 1 | Try 2 | Try 3 | Try 4 | Try 5 | Verdict |
 |---|---|---|---|---|---|---|---|
-| 1.  |  |  |  |  |  |  |  |
-| 2.  |  |  |  |  |  |  |  |
-| 3.  |  |  |  |  |  |  |  |
-| 4.  |  |  |  |  |  |  |  |
-| 5.  |  |  |  |  |  |  |  |
+| 1. Full three-tool run returns a fit card | 4 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 2. Empty search stops before tool 2 | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 3. Selected item is the first search result | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 4. Fit card has price, platform, length (revised) | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 5. Price ceiling is enforced | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
 
-**Real output from one try**, pasted as text, naming the file and function
-that produced it:
+**Real output from one try** (criterion 2, try 1), from `results/run_2026-10-18_2342_before.md`, produced by `run_eval.py::run_once` calling `agent.py::run_agent`:
 
 ```
-
+[1] search_listings (via MCP)
+      in:  description='designer ballgown $5', size='XXS', max_price=5.0
+      out: [] (empty)
+      →    branch: empty, stopping
+  try 1: stopped early — No items found matching 'designer ballgown $5'. Try differen
 ```
 
 ---
@@ -230,15 +234,18 @@ that produced it:
 
 | # | Criterion | Target | Verdict | How I decided |
 |---|---|---|---|---|
-| 1 |  |  |  |  |
-| 2 |  |  |  |  |
-| 3 |  |  |  |  |
-| 4 |  |  |  |  |
-| 5 |  |  |  |  |
+| 1 | Full three-tool run returns a fit card | 4 of 5 | MET (5/5) | Five of five tries produced a fit card. |
+| 2 | Empty search stops before tool 2 | 5 of 5 | MET (5/5) | Five of five stopped at the branch, with a message. The message echoes the bad `$5` keyword. |
+| 3 | Selected item is the first search result | 5 of 5 | MET (5/5) | The trace's first result title matches `selected_item` in all five tries. I compared titles, not IDs. |
+| 4 | Fit card has price, platform, length (revised) | 5 of 5 | MET (5/5) | All five cards name $18 or $19 and Depop, and run three to four sentences. I counted by eye. |
+| 5 | Price ceiling is enforced | 5 of 5 | MET (5/5) | The selected item is $18 in all five tries. The other results' prices aren't printed, so "all results" isn't confirmed by this output. |
 
 **Diagnoses**
 
+No criterion was missed, so there are no misses to diagnose. The more useful finding is a defect the criteria didn't catch.
 
+- **The search keyword has a `$5` in it.** Place: the loop's parse step, `agent.py::run_agent`. Mechanism: the size cleanup pattern `size\s+[a-zA-Z0-9/\s]+` also consumes the word "under" after "XXS", so the price cleanup finds nothing and "$5" stays in the keywords. Criterion 2 still passed because the branch works. The bug only shows in the message text, which that criterion doesn't check.
+- **My targets were low.** Criterion 1 only checks that a card exists, not what it says. Criterion 2 checks the stop and that a message exists, not what the message names. I'd tighten criterion 2 first, to require the message to echo the query as the user typed it.
 
 ---
 
@@ -269,25 +276,22 @@ that produced it:
       out: Achieve peak model-off-duty energy with this perfectly worn-in vintage faded grey band tee. 🎸 It's got that id…
 ```
 
-**Empty search** (`python app.py ask 'designer ballgown size XXS under $5' --trace`)
+**Empty search** (`python app.py ask 'designer ballgown size XXS under $5' --trace`, after the fix in the Improvement section)
 
 ```
 [1] search_listings (via MCP)
-      in:  description='designer ballgown $5', size='XXS', max_price=5.0
+      in:  description='designer ballgown', size='XXS', max_price=5.0
       out: [] (empty)
       →    branch: empty, stopping
 
-  No items found matching 'designer ballgown $5'. Try different keywords, a larger size range, or increase your budget.
+  No items found matching 'designer ballgown'. Try different keywords, a larger size range, or increase your budget.
 
 0 model calls this session
 ```
 
-The empty trace is shorter because the loop stops before `suggest_outfit`. The `$5` in the description shows the parsing bug. The size cleanup pattern `size\s+[a-zA-Z0-9/\s]+` also consumes the word "under" after "XXS", so the price cleanup finds nothing to remove and "$5" stays in the search keywords.
+The empty trace is shorter because the loop stops before `suggest_outfit`. Before the fix, the same query gave `description='designer ballgown $5'`, which is the bug described in Diagnoses.
 
-**On the MCP move:** <!-- what changed in your code, and whether anything
-behaved differently afterwards. If the rewire didn't work, say exactly where it
-broke — the error text and the last thing that worked. That earns the point in
-full. -->
+**On the MCP move:** I moved `search_listings` behind an MCP server. `mcp_server.py` registers it with a description and typed inputs, and `agent.py::run_agent` calls it through `mcp_client.call_tool`. Nothing behaved differently: the matching and empty-search runs return the same results as the direct call, and the trace shows `search_listings (via MCP)`.
 
 
 
@@ -300,21 +304,23 @@ full. -->
 
      `python run_eval.py --label after` -->
 
-**What I changed:**
+**What I changed:** One line in `agent.py::run_agent`, the size cleanup pattern. It was `size\s+[a-zA-Z0-9/\s]+`, and is now `size\s+[a-zA-Z0-9/\s]+?(?=\s+under|\s*$)`. The new version stops before "under", so the price cleanup can remove "under $5" and the keywords no longer carry the dollar sign.
 
-**Which failure it was meant to fix:**
+**Which failure it was meant to fix:** The parse bug from the Diagnoses section. The search keyword `designer ballgown $5` became `designer ballgown`. Criterion 2 didn't measure this, so the run log can't show the fix as a verdict change. The evidence is the trace and the message.
 
 ### Run Log — After
 
 | Criterion | Target | Try 1 | Try 2 | Try 3 | Try 4 | Try 5 | Verdict |
 |---|---|---|---|---|---|---|---|
-| 1.  |  |  |  |  |  |  |  |
-| 2.  |  |  |  |  |  |  |  |
-| 3.  |  |  |  |  |  |  |  |
-| 4.  |  |  |  |  |  |  |  |
-| 5.  |  |  |  |  |  |  |  |
+| 1. Full three-tool run returns a fit card | 4 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 2. Empty search stops before tool 2 | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 3. Selected item is the first search result | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 4. Fit card has price, platform, length (revised) | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 5. Price ceiling is enforced | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
 
-**Did it help, and how do I know:**
+Source: `results/run_2026-10-18_2348_after.md`.
+
+**Did it help, and how do I know:** It fixed the parse bug, but the verdicts didn't change, because they were already passing. The after-run's empty-search try shows `description='designer ballgown'` and the message reads "No items found matching 'designer ballgown'". The before-run showed `$5` in both. I checked the after-run's fit cards by eye, the same way as before, and they still name $18 or $19 and Depop.
 
 <!-- If it made things worse, say that. Honestly reported, that earns full
      credit and is more interesting than one that worked. -->
@@ -328,6 +334,12 @@ full. -->
 <!-- For each criterion still missed: what you'd do, and why you stopped where
      you did. "I ran out of time" is fine if it's true. Pretending nothing is
      left is not. -->
+
+- **Criterion 5 ("all results under budget") isn't fully checked.** The run log only shows the selected item's price. The fix is to print every result's price in `run_eval.py`, or to narrow the criterion to the selected item. I stopped here because the time ran out. The criterion's wording is still as it was written, so the verdict is only for the selected item.
+- **Criterion 3 compares titles, not IDs.** A duplicate title would hide a mismatch. The fix is to print the IDs.
+- **Criterion 2 doesn't check the message text.** The `$5` bug only showed up in the message. The fix is to tighten the criterion so the message echoes the search as the user typed it, then rerun. I didn't do it because it's a second change.
+- **Criterion 4 counts sentences by eye.** A script that counts sentences would make it reliable.
+- **Model unavailable message says the key was rejected.** It doesn't say the model couldn't be reached. Tightening the wording in `generate.py` would fix that. I left it, because the message does name what to check.
 
 
 

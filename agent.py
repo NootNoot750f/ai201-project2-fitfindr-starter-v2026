@@ -126,7 +126,7 @@ def run_agent(query: str, wardrobe: dict) -> dict:
     if price_match:
         max_price = float(price_match.group(1))
 
-    description = re.sub(r'size\s+[a-zA-Z0-9/\s]+', '', query, flags=re.IGNORECASE)
+    description = re.sub(r'size\s+[a-zA-Z0-9/\s]+?(?=\s+under|\s*$)', '', query, flags=re.IGNORECASE)
     description = re.sub(r'under\s+\$?[\d.]+', '', description, flags=re.IGNORECASE)
     description = description.strip()
 
