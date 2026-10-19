@@ -108,6 +108,7 @@ def run_agent(query: str, wardrobe: dict) -> dict:
         than a stack trace. The import is already at the top of this file.
     """
     session = new_session(query, wardrobe)
+    trace.start_trace()
     iteration = 0
 
     iteration += 1
@@ -143,19 +144,29 @@ def run_agent(query: str, wardrobe: dict) -> dict:
     session["search_results"] = results
 
     if not results:
+        trace.step("search_listings (via MCP)", inputs=f"description={description!r}, size={size!r}, max_price={max_price}", returned=results,
+                   note="branch: empty, stopping")
         session["error"] = (
             f"No items found matching '{description}'. "
             f"Try different keywords, a larger size range, or increase your budget."
         )
         return session
 
+    trace.step("search_listings (via MCP)", inputs=f"description={description!r}, size={size!r}, max_price={max_price}", returned=results,
+               note="branch: results found, continuing")
     session["selected_item"] = results[0]
 
-    outfit = suggest_outfit(session["selected_item"], wardrobe)
-    session["outfit_suggestion"] = outfit
+    try:
+        outfit = suggest_outfit(session["selected_item"], wardrobe)
+        session["outfit_suggestion"] = outfit
+        trace.step("suggest_outfit", inputs=session["selected_item"], returned=outfit)
 
-    fit_card = create_fit_card(outfit, session["selected_item"])
-    session["fit_card"] = fit_card
+        fit_card = create_fit_card(outfit, session["selected_item"])
+        session["fit_card"] = fit_card
+        trace.step("create_fit_card", inputs=session["selected_item"], returned=fit_card)
+    except ModelUnavailable as exc:
+        trace.step("model call", note="branch: ModelUnavailable, stopping")
+        session["error"] = f"Couldn't reach the model. {exc}"
 
     return session
 

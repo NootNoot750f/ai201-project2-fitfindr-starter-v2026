@@ -254,17 +254,35 @@ that produced it:
      the same length, your branch isn't working — and this is the fastest way
      anyone will ever find that out. -->
 
-**Happy path**
+**Happy path** (`python app.py ask 'band tee under $25' --trace`)
 
 ```
-
+[1] search_listings (via MCP)
+      in:  description='band tee', size=None, max_price=25.0
+      out: 4 items: Vintage Band Tee — Faded Grey, Y2K Baby Tee — Butterfly Print, Graphic Tee — 2003 Tour Bootleg Style … +1 more
+      →    branch: results found, continuing
+[2] suggest_outfit
+      in:  Vintage Band Tee — Faded Grey ($19.0, depop)
+      out: Here are two outfit combinations using the vintage faded grey band tee and pieces from your wardrobe, styled f…
+[3] create_fit_card
+      in:  Vintage Band Tee — Faded Grey ($19.0, depop)
+      out: Achieve peak model-off-duty energy with this perfectly worn-in vintage faded grey band tee. 🎸 It's got that id…
 ```
 
-**Empty search**
+**Empty search** (`python app.py ask 'designer ballgown size XXS under $5' --trace`)
 
 ```
+[1] search_listings (via MCP)
+      in:  description='designer ballgown $5', size='XXS', max_price=5.0
+      out: [] (empty)
+      →    branch: empty, stopping
 
+  No items found matching 'designer ballgown $5'. Try different keywords, a larger size range, or increase your budget.
+
+0 model calls this session
 ```
+
+The empty trace is shorter because the loop stops before `suggest_outfit`. The `$5` in the description shows the parsing bug. The size cleanup pattern `size\s+[a-zA-Z0-9/\s]+` also consumes the word "under" after "XXS", so the price cleanup finds nothing to remove and "$5" stays in the search keywords.
 
 **On the MCP move:** <!-- what changed in your code, and whether anything
 behaved differently afterwards. If the rewire didn't work, say exactly where it
